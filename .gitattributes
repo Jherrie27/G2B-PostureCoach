@@ -1,0 +1,23 @@
+# Normalize line endings: text files stored as LF in the repo, checked out
+# native on each platform. Prevents the CRLF/LF churn warnings.
+* text=auto
+
+# Explicit text
+*.py    text
+*.md    text
+*.txt   text
+*.json  text
+*.jsonl text
+*.csv   text
+*.service text
+*.cfg   text
+
+# Binary (never normalize / diff)
+*.npy   binary
+*.pkl   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.zip   binary
+*.mat   binary
+*.sqlite3 binary

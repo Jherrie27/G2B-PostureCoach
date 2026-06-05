@@ -1,0 +1,44 @@
+# ── Editor / tooling / nested repos ────────────────────────────
+.claude/
+G2B-AI4-PostureCoach/
+
+# ── Python / venv ──────────────────────────────────────────────
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# ── Secrets (NEVER commit) ─────────────────────────────────────
+.env
+*.env
+!.env.example
+
+# ── Large source datasets — not required to run (kept local only) ──
+images/
+mpii_human_pose_v1_u12_2/
+*.zip
+mpii_posture_labeled.csv
+webcam_posture_combined_augmented.csv
+
+# ── Superseded / large fallback artifacts (kept local only) ────
+rag_db_v2/
+*.pkl
+
+# ── Build / runtime caches ─────────────────────────────────────
+.cache/
+notebooks/*.png
+
+# ── OS ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# NOTE: the following ARE committed because they are required to run v3:
+#   models/posture_lgbm_v3.txt, models/feature_order.json
+#   rag_db_v3/embeddings.npy, rag_db_v3/chunks.jsonl
+#   data/augmented/training_set.csv, data/kb_chunks_tagged.jsonl
+
+bfg.jar

@@ -1,0 +1,15 @@
+[Unit]
+Description=G2B Posture Correction Coach
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/g2b_posture_coach
+EnvironmentFile=/home/pi/g2b_posture_coach/.env
+ExecStart=/home/pi/g2b_posture_coach/.venv/bin/streamlit run app.py --server.address 0.0.0.0 --server.port 8501
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

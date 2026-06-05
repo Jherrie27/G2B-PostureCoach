@@ -1,0 +1,37 @@
+# G2B Posture Coach — pinned for Python 3.12 (adjusted from guide's 3.11/0.10.14 set)
+# Dev target: Windows + Python 3.12.x. Pi 5 target uses the same versions where ARM64 wheels exist.
+
+# === Core CV ===
+mediapipe==0.10.18          # 0.10.18 has 3.12 wheels (guide pinned 0.10.14 for 3.11)
+opencv-python==4.10.0.84
+numpy==1.26.4               # keep <2.0 for mediapipe binary compat
+protobuf==4.25.3
+
+# === ML ===
+lightgbm==4.3.0
+scikit-learn==1.5.0
+pandas==2.2.2
+scipy==1.13.1
+joblib==1.4.2
+
+# === RAG ===
+# NOTE: ChromaDB dropped on this platform — chroma-hnswlib has no installable
+# wheel (0.7.5 has a cp312 wheel but buildable chromadb pins 0.7.6). At ~2.8k
+# chunks we use a NumPy cosine store instead (src/rag/build_index.py).
+sentence-transformers==3.0.1
+rank-bm25==0.2.2
+
+# === LLM ===
+groq==0.9.0
+httpx==0.27.2              # groq 0.9.0 passes `proxies=` which httpx>=0.28 removed
+tiktoken==0.7.0
+
+# === App ===
+streamlit==1.36.0
+python-dotenv==1.0.1
+
+# === Dev ===
+pytest==8.2.2
+matplotlib==3.9.0
+seaborn==0.13.2
+jupyter==1.0.0

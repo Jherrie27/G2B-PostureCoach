@@ -1,0 +1,32 @@
+# G2B core deps (Phases 1-5). RAG deps (chromadb, sentence-transformers) are
+# installed separately at Phase 6 — chroma-hnswlib needs a C++ toolchain on Windows.
+
+# === Core CV ===
+mediapipe==0.10.18
+opencv-python==4.10.0.84
+numpy==1.26.4
+protobuf==4.25.3
+
+# === ML ===
+lightgbm==4.3.0
+scikit-learn==1.5.0
+pandas==2.2.2
+scipy==1.13.1
+joblib==1.4.2
+
+# === sparse retrieval (pure python, safe to install early) ===
+rank-bm25==0.2.2
+
+# === LLM ===
+groq==0.9.0
+tiktoken==0.7.0
+
+# === App ===
+streamlit==1.36.0
+python-dotenv==1.0.1
+
+# === Dev ===
+pytest==8.2.2
+matplotlib==3.9.0
+seaborn==0.13.2
+jupyter==1.0.0
