@@ -26,6 +26,7 @@ import pandas as pd
 from src.utils.camera import open_working_camera
 from src.cv.pose_extractor import PoseExtractor
 from src.cv.landmarks import ORDERED_NAMES, LANDMARK_INDICES
+from src.utils.config import mediapipe_complexity
 
 CLASSES = ["correct_posture", "slouching", "neck_forward", "lean"]
 OUT_DIR = Path("data/raw_landmarks/CV")
@@ -59,8 +60,13 @@ def main():
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     cap, cam_idx = open_working_camera(preferred=args.camera)
-    print(f"Using camera index {cam_idx}. Class = {args.label}.")
-    pose = PoseExtractor(model_complexity=1)
+    # Collect at the SAME MediaPipe complexity the live app uses on this device
+    # (Full=1 on PC, Lite=0 on the Pi). This keeps training data consistent with
+    # inference, so a retrain done on the Pi matches how the Pi actually runs.
+    complexity = mediapipe_complexity()
+    print(f"Using camera index {cam_idx}. Class = {args.label}. "
+          f"MediaPipe complexity = {complexity}.")
+    pose = PoseExtractor(model_complexity=complexity)
 
     rows = []
     win = f"Collecting: {args.label}  (press q to stop)"
