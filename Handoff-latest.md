@@ -1,12 +1,63 @@
 # G2B Posture Correction Coach — HANDOFF (LATEST)
 
-**Last updated:** 2026-06-06
+**Last updated:** 2026-06-20
 **GitHub:** https://github.com/Jherrie27/G2B-PostureCoach (branch `main`)
 **Supersedes:** `HANDOFF.md` (this file adds the GitHub push, secret handling, the Python 3.13
-install fix, the live-demo findings, and the presentation material).
+install fix, the live-demo findings, and the presentation material). The **2026-06-20 update**
+section below adds the real-data retrain workflow and the real-time posture-aware chatbot.
 
 This is the single source of truth. A new engineer or a fresh AI session should be able to pick up
 from here without the chat history.
+
+---
+
+## UPDATE 2026-06-20 — real-data retrain + real-time chatbot (READ FIRST)
+
+Two things changed since the 2026-06-06 baseline. Both are merged to `main`
+(commits `ee4011e`, `24fcf72`). The user confirmed the app is noticeably better live.
+
+### A. The CV accuracy fix = train on REAL webcam data (no longer synthetic-only)
+The model was previously trained only on synthetic data, which is the root cause of
+"camera labels my posture wrong." Two new scripts collect real frames and retrain on them:
+
+- **`collect_posture.py <class> --seconds 60`** — records real landmarks from the webcam to
+  `data/raw_landmarks/CV/<label>_<ts>.csv` (the `landmark_<idx>_<x|y|z|v>` columns the data
+  pipeline already expects). Shows a live preview with an OK / ADJUST-FRAMING indicator. Collect
+  **waist-up, good front lighting**, one run per class: `correct_posture`, `slouching`,
+  `neck_forward`, `lean`. It captures at the device's MediaPipe complexity automatically
+  (Full=1 on PC, Lite=0 on Pi) so training matches inference.
+- **`train_real.py`** — trains LightGBM **directly on the real frames** (bypasses the heuristic
+  filter in `build_dataset.py` that would silently drop labeled frames), prints a **REAL held-out
+  accuracy + confusion matrix + per-class feature means**, backs up the old model to
+  `models/posture_lgbm_v3.synthetic_<ts>.txt.bak`, and saves to `models/posture_lgbm_v3.txt`
+  (the path the app loads). Restart the app to use it.
+
+**The accuracy-improvement loop is now:** `collect_posture.py` (x4) → `train_real.py` → run app.
+(The synthetic loop — `build_dataset` → `train_lgbm` — still exists as the fallback.)
+The committed model is now trained on the dev machine's real data; the synthetic backup is local.
+
+### B. The chatbot now "sees" the camera in real time (model untouched)
+Ported/improved from the friend's `Handoff-chatbot-fixes-applied.md`. Three changes:
+
+- **`rag_query.py`** — passes the live posture label to the retriever + prompt **regardless of
+  `is_reliable`** (ears + shoulders are enough to classify even when hips are off-screen). Also
+  only prepends the templated `fallback_response` when retrieval is truly empty
+  (`not grounded and not retrieved`), which killed the confusing two-part "I don't have
+  references… but you're slouching" replies.
+- **`src/rag/prompt_builder.py`** — added ANTI-HALLUCINATION RULES to the SYSTEM prompt and made
+  `build_prompt` three-way: no state → ask user to sit; partial view → `_format_partial_observation`
+  (real upper-body measurements + "don't guess hips"); reliable → full `_format_observation`.
+- `src/cv/landmarks.py` was **NOT** touched (editing it broke the camera in the friend's run; the
+  `rag_query.py` change makes it unnecessary).
+
+So "what posture do I have and how do I improve it" now returns a grounded answer from the live
+posture, even on a chest-up desk webcam.
+
+### C. Open tuning knob (only if needed)
+The classifier fuses `0.7*model + 0.3*rules` (`src/cv/classifier.py`, constructed in
+`src/cv/pipeline.py`). The rules use the old synthetic thresholds. Keep `rule_weight=0.30` unless,
+after a real-data retrain, the model is right but the fused live label drifts — then lower it
+(e.g. `PostureClassifier(..., rule_weight=0.15)`). Change one variable at a time.
 
 ---
 
@@ -40,7 +91,8 @@ from here without the chat history.
 | 7 | Workers + Streamlit app | ✅ done (headless-verified; live run works) |
 | 8 | Pi 5 artifacts (`pi5_setup.md`, systemd) | ✅ docs done; **not run on Pi hardware** |
 | — | GitHub publish + secret hygiene | ✅ done |
-| 9/10 | Live accuracy tuning, Pi deploy, demo polish | ⏳ needs hardware / real data |
+| 9 | Real-data collect + retrain (`collect_posture.py`, `train_real.py`); real-time chatbot | ✅ done on dev machine (2026-06-20); verified improved live |
+| 10 | Pi deploy, demo polish | ⏳ needs Pi hardware (recollect+retrain on the Pi — see §13.3) |
 
 ---
 
@@ -59,6 +111,14 @@ From the project root. Venv Python = `.venv\Scripts\python.exe` (Windows). Webca
 **Automated tests (no camera):**
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/test_features.py tests/test_smoother.py tests/test_state.py -q
+```
+**Improve accuracy on a new machine/camera (real-data retrain — see UPDATE 2026-06-20 §A):**
+```powershell
+.venv\Scripts\python.exe collect_posture.py correct_posture --seconds 60
+.venv\Scripts\python.exe collect_posture.py slouching      --seconds 60
+.venv\Scripts\python.exe collect_posture.py neck_forward   --seconds 60
+.venv\Scripts\python.exe collect_posture.py lean           --seconds 60
+.venv\Scripts\python.exe train_real.py
 ```
 
 ---
@@ -208,11 +268,11 @@ These are **separate systems**:
 
 | Issue | Cause | Fix |
 |---|---|---|
-| **Label stuck / wrong (e.g. "Lean conf=0.39"), chatbot says "can't see your posture"** | **Hips not in the camera frame** → reliability gate fails (`is_reliable=False`) → pipeline holds a stale label and the chatbot refuses by design | **Frame the user from the waist up** + good front lighting. (Optional code fix below.) |
+| **Label stuck / wrong (e.g. "Lean conf=0.39"), chatbot says "can't see your posture"** | **Hips not in the camera frame** → reliability gate fails (`is_reliable=False`) → pipeline holds a stale label and the chatbot refuses by design | **FIXED for the chatbot (2026-06-20 §B):** `rag_query.py` now passes the live posture through even when `is_reliable=False`. Still frame waist-up for best CV. |
 | Webcam black / wrong | multiple cameras; index 0 is a virtual/IR cam that opens but yields no frames | auto-detected; override `\$env:G2B_CAMERA_INDEX=1` (try 0,1,2). Fixed in `src/utils/camera.py`. |
 | `mediapipe==0.10.18 not found` on install | user on Python 3.13 (pins only cover ≤3.12) | unpinned runtime install or use Python 3.12 (see §3) |
 | `RuntimeError: GROQ_API_KEY is not set` | no `.env` / wrong folder | create `.env` (§4); run from project root |
-| Wrong class even when framed well | **synthetic-trained model** (no real landmark data) | known limitation — collect real data (§13) |
+| Wrong class even when framed well | **synthetic-trained model** (no real landmark data) | **ADDRESSED (2026-06-20 §A):** collect real data with `collect_posture.py` and retrain with `train_real.py`. Retrain per machine/camera. |
 | MediaPipe `DLL load failed` (Windows) | missing MSVC runtime / flaky native import | install VC++ Redistributable; constants already decoupled into `landmarks.py` |
 | `groq` `proxies` TypeError | groq 0.9.0 vs httpx ≥0.28 | `httpx==0.27.2` pinned (or use newest groq unpinned) |
 
@@ -228,9 +288,13 @@ waist.
 
 **What's committed to GitHub (runnable out of the box, ~15 MB, 79 files):**
 - Source: `src/` (`cv/`, `data/`, `state/`, `rag/`, `workers/`, `utils/`), `app.py`, `main.py`,
-  `rag_query.py`, `train_lgbm.py`, `tests/`.
-- Artifacts: `models/posture_lgbm_v3.txt` + `feature_order.json`; `rag_db_v3/embeddings.npy` +
-  `chunks.jsonl`; `data/augmented/training_set.csv`, `data/kb_chunks_{raw,tagged}.jsonl`.
+  `rag_query.py`, `train_lgbm.py`, `tests/`. **New (2026-06-20):** `collect_posture.py`,
+  `train_real.py` (real-data capture + retrain — see UPDATE 2026-06-20 §A).
+- Artifacts: `models/posture_lgbm_v3.txt` (now **real-data-trained**) + `feature_order.json`;
+  `rag_db_v3/embeddings.npy` + `chunks.jsonl`; `data/augmented/training_set.csv`,
+  `data/kb_chunks_{raw,tagged}.jsonl`; **`data/raw_landmarks/CV/*.csv`** (the collected real frames).
+  The previous synthetic model is preserved in git history and as a local
+  `models/posture_lgbm_v3.synthetic_<ts>.txt.bak` (gitignored/untracked).
 - Docs: `README.md`, `INSTRUCTIONS.md`, `HANDOFF.md`, this `Handoff-latest.md`, `CHANGES.md`,
   `pi5_setup.md`, `deploy/g2b-coach.service`, `G2B_POSTURE_REDESIGN.md`, `G2B_EXECUTION_GUIDE.md`.
 - Fallbacks: `CV/*.csv`, `*_v2_backup.py`, `retrain.py`, `session.py`, `Test.py`.
@@ -253,10 +317,21 @@ waist.
 3. **Raspberry Pi 5 deploy** — follow `pi5_setup.md`. **Use a USB webcam** (the CSI camera *module*
    is not supported — v3 uses only `cv2.VideoCapture`; the old `main.py` had a `picamera2` fallback
    that the rewrite dropped). Re-adding `picamera2` is a known, contained TODO.
+   **Pi notes (2026-06-20):**
+   - `pi5_setup.md` still says `git checkout feature/redesign-v3` — **stale; use `main`.** The
+     model, real data, and `rag_db_v3/` are all committed, so you can **skip the `scp` step (§4)**.
+   - The committed model was trained on the **dev machine's** webcam at MediaPipe **Full (1)**;
+     the Pi auto-runs **Lite (0)** for speed, so accuracy can dip even with the same webcam.
+     Either run the Pi with `export G2B_MP_COMPLEXITY=1` to match the model, **or** recollect on
+     the Pi (`collect_posture.py` auto-captures at the Pi's Lite complexity) and `train_real.py`.
+   - Collecting on the Pi needs a **display** (monitor or VNC) because the collector opens a
+     preview window. Verify CV first with `python main.py` (no key/torch needed) before the full app.
 4. **torch on ARM** — the RAG embedder needs PyTorch; install can be heavy/fragile on the Pi.
-5. **Highest-value:** collect **real** raw-landmark data (a collector dumping all 33 landmarks ×4
-   coords to `data/raw_landmarks/CV/*.csv`) to replace/augment the synthetic set and get a real
-   accuracy number. `build_dataset.py` already auto-mixes real samples in when present.
+5. **Highest-value:** collect **real** raw-landmark data to replace the synthetic set and get a
+   real accuracy number. ✅ **DONE (2026-06-20):** `collect_posture.py` dumps our 9 landmarks ×4
+   coords to `data/raw_landmarks/CV/*.csv` and `train_real.py` retrains directly on them. The
+   committed model is now real-data-trained on the dev machine. **Re-run both per new
+   machine/camera** (e.g. on the Pi) since the model is tuned to the camera it was collected on.
 
 ---
 
