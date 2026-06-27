@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>G2B Posture Coach Online Demo</title>
+    <meta
+      name="description"
+      content="Browser webcam demo for the G2B Posture Correction Coach."
+    >
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Online demo</p>
+        <h1>G2B Posture Coach</h1>
+      </div>
+      <a class="header-link" href="../README.md">Project docs</a>
+    </header>
+
+    <main class="layout">
+      <section class="camera-panel" aria-label="Camera analysis">
+        <div class="toolbar">
+          <div class="toolbar-actions">
+            <button id="startCamera" class="primary-button" type="button">Start camera</button>
+            <button id="stopCamera" class="secondary-button" type="button" disabled>Stop</button>
+            <button id="switchCamera" class="secondary-button" type="button" disabled>Switch</button>
+          </div>
+          <span id="cameraStatus" class="status-pill">Loading model</span>
+        </div>
+
+        <div class="stage" id="stage">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div id="emptyState" class="empty-state">
+            <span>Camera off</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel" aria-label="Posture results">
+        <section class="panel current-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Current posture</p>
+            <span id="viewQuality" class="quality-badge">No reading</span>
+          </div>
+          <div id="postureClass" class="posture-class">Waiting</div>
+          <div class="confidence-row">
+            <span>Confidence</span>
+            <strong id="confidenceValue">--</strong>
+          </div>
+          <div class="probability-list" id="probabilityList"></div>
+        </section>
+
+        <section class="panel metric-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Measured indicators</p>
+          </div>
+          <div class="metric-grid">
+            <div class="metric">
+              <span>Forward head</span>
+              <strong id="forwardHeadMetric">--</strong>
+            </div>
+            <div class="metric">
+              <span>Shoulder roll</span>
+              <strong id="shoulderRollMetric">--</strong>
+            </div>
+            <div class="metric">
+              <span>Shoulder tilt</span>
+              <strong id="tiltMetric">--</strong>
+            </div>
+            <div class="metric">
+              <span>Session</span>
+              <strong id="sessionMetric">0:00</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel coach-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Coach</p>
+          </div>
+          <div id="coachFeed" class="coach-feed" aria-live="polite"></div>
+          <div class="quick-prompts" aria-label="Quick prompts">
+            <button type="button" data-prompt="What posture do I have?">Posture</button>
+            <button type="button" data-prompt="How do I correct it?">Correction</button>
+            <button type="button" data-prompt="What setup should I adjust?">Setup</button>
+          </div>
+          <form id="coachForm" class="coach-form">
+            <input
+              id="coachInput"
+              type="text"
+              autocomplete="off"
+              placeholder="Ask the coach"
+              aria-label="Ask the coach"
+            >
+            <button class="primary-button" type="submit">Send</button>
+          </form>
+        </section>
+      </aside>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+name: Deploy online browser demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "Jherrie-update-6/20/2026"
+    paths:
+      - index.html
+      - online-demo/**
+      - models/posture_lgbm_v3.txt
+      - models/feature_order.json
+      - .github/workflows/online-demo-pages.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build static site
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site/models
+          cp index.html _site/index.html
+          cp -R online-demo _site/online-demo
+          cp models/posture_lgbm_v3.txt _site/models/posture_lgbm_v3.txt
+          cp models/feature_order.json _site/models/feature_order.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
