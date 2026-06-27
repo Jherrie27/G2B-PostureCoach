@@ -1,0 +1,16 @@
+[
+  "ear_shoulder_offset_x",
+  "craniovertebral_angle",
+  "head_forward_offset_z",
+  "nose_shoulder_offset_x",
+  "shoulder_roll_z",
+  "torso_compression_ratio",
+  "elbow_forward_offset_z",
+  "spine_angle_3d",
+  "shoulder_tilt_angle",
+  "hip_tilt_angle",
+  "midline_deviation_angle",
+  "nose_centerline_offset_x",
+  "lateral_asymmetry_index",
+  "landmark_confidence_mean"
+]
