@@ -51,6 +51,9 @@ The webcam index is auto-detected; override with `G2B_CAMERA_INDEX=1` if needed.
 ## Tests
 
 ```bash
+Run
+.venv\Scripts\python.exe -m streamlit run app.py
+
 .venv\Scripts\python.exe -m pytest tests/test_features.py tests/test_smoother.py tests/test_state.py -q
 .venv\Scripts\python.exe tests/test_live_classifier.py   # manual: needs you on camera
 ```
