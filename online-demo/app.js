@@ -75,6 +75,7 @@ let drawingUtils = null;
 let lgbmModel = null;
 let stream = null;
 let running = false;
+let autoStartTried = false;
 let mirrored = true;
 let lastVideoTime = -1;
 let animationId = null;
@@ -85,6 +86,7 @@ let sessionTracker = new SessionTracker();
 init();
 
 async function init() {
+  elements.startCamera.disabled = true;
   renderProbabilityBars(CLASSES.map(() => 0));
   addAssistantMessage("Start camera when ready.");
   wireEvents();
@@ -109,9 +111,12 @@ async function init() {
     });
     drawingUtils = new DrawingUtils(elements.overlay.getContext("2d"));
     setStatus("Ready", "ok");
+    elements.startCamera.disabled = false;
+    startCamera({ auto: true });
   } catch (error) {
     console.error(error);
     setStatus("Model load failed", "error");
+    elements.startCamera.disabled = true;
     addAssistantMessage("The browser could not load the posture model. Refresh the page and check the network connection.");
   }
 }
@@ -132,9 +137,18 @@ function wireEvents() {
   });
 }
 
-async function startCamera() {
+async function startCamera(options = {}) {
+  const auto = Boolean(options.auto);
+  if (auto && autoStartTried) {
+    return;
+  }
+  if (auto) {
+    autoStartTried = true;
+  }
+
   if (!poseLandmarker) {
     setStatus("Still loading", "warn");
+    elements.startCamera.disabled = true;
     return;
   }
 
@@ -162,8 +176,15 @@ async function startCamera() {
     animationId = requestAnimationFrame(predictLoop);
   } catch (error) {
     console.error(error);
-    setStatus("Camera blocked", "error");
-    addAssistantMessage("Camera permission was blocked or unavailable.");
+    setStatus(auto ? "Camera permission needed" : "Camera blocked", auto ? "warn" : "error");
+    elements.startCamera.disabled = false;
+    elements.stopCamera.disabled = true;
+    elements.switchCamera.disabled = true;
+    addAssistantMessage(
+      auto
+        ? "The browser did not start the webcam automatically. Press Start camera and allow camera access."
+        : "Camera permission was blocked or unavailable."
+    );
   }
 }
 
@@ -180,7 +201,7 @@ function stopCamera() {
   clearCanvas();
   elements.video.srcObject = null;
   elements.emptyState.classList.remove("hidden");
-  elements.startCamera.disabled = false;
+  elements.startCamera.disabled = !poseLandmarker;
   elements.stopCamera.disabled = true;
   elements.switchCamera.disabled = true;
   if (poseLandmarker) {
